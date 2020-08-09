@@ -15,12 +15,11 @@ namespace Spider
     {
         static async Task Main(string[] args)
         {
-            Question_Struct question_Struct = new Question_Struct("412076145", 0);
-            HttpResponseMessage data = await HttpCli.Get(question_Struct);
+            Question_Struct question_Struct = new Question_Struct("29843358", 0);
 
-            string ddd = await data.Content.ReadAsStringAsync();
-
-            var x = JsonSerializer.Deserialize<json_class.Root>(ddd);
+            Question.question_queue.Enqueue(question_Struct);
+            await Question.Run();
+            
         }
     }
 }

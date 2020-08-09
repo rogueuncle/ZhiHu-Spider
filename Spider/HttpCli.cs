@@ -27,6 +27,10 @@ namespace Spider
             return rsp;
         }
     }
+    interface IHttp
+    {
+        string User_Args { get; set; }
+    }
 
     interface IHttp_Get_Interface
     {

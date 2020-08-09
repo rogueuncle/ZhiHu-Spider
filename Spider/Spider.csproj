@@ -76,6 +76,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Question.cs" />
+    <Compile Include="Sql.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
