@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Text.Json;
 using Spider.json_class;
 using System.Data.SqlClient;
+using System.Collections.Concurrent;
 
 namespace Spider
 {
@@ -15,63 +16,91 @@ namespace Spider
         /// <summary>
         /// 问题的先进先出
         /// </summary>
-        public static Queue<Question_Struct> question_queue = new Queue<Question_Struct>();
+        //public static Queue<Question_Struct> question_queue = new Queue<Question_Struct>();
+        public static BlockingCollection<Question_Struct> question_queue = new BlockingCollection<Question_Struct>();
 
-        /// <summary>
-        /// 爬取数据的主入口
-        /// </summary>
-        public static async Task Run()
+        public static async Task Run(bool s)
         {
             SqlConnection conn = Sql._Get_Connection();
             while (true)
             {
-                Question_Struct inputdata = question_queue.Dequeue();   //获取一个队列参数
-                
-                #region 验证当前问题是否已经被获取
+                //Question_Struct question_data = question_queue.Dequeue();
+                Question_Struct question_data = question_queue.Take();
+
+                #region 判断当前问题是否已经爬取
                 SqlCommand cur = conn.CreateCommand();
                 cur.CommandText = "select count(id) from Question where id = @id";
-                cur.Parameters.AddWithValue("@id", inputdata.Question_id);
+                cur.Parameters.AddWithValue("@id", question_data.Question_id);
                 int _question_count = (int)await cur.ExecuteScalarAsync();
-                if(_question_count == 1)
+                if (_question_count == 1)
                 {
                     Sql.Put_SqlConnection(conn);
+                    cur.Dispose();
                     continue;
                 }
                 #endregion
 
-                HttpResponseMessage rsp = await _Http_Get(inputdata);
-                if (rsp.StatusCode != System.Net.HttpStatusCode.OK || rsp is null) 
-                {
-                    Console.WriteLine();
-                    continue;
-                } 
-
-                string rspdata = await rsp.Content.ReadAsStringAsync();
-
-                #region 解析js并读取参数值
-                //var x = JsonSerializer.Deserialize<json_class.Root>(ddd);
-                JsonDocument json_obj = JsonDocument.Parse(rspdata);   //解析js
-
-                JsonElement data = json_obj.RootElement.GetProperty("data");  //获取data
-
-                if (data.GetArrayLength() == 0) continue;
-
-                json_class.Question question = Js2Question(data[0]);    //获取问题的详细信息
-                //验证问题信息是否在数据库中
-
-
-
-                for (int i = 0; i < data.GetArrayLength(); i++)
-                {
-                    json_class.Author author = Js2Author(data[i]);
-                    //验证作者信息是否在数据库中
-                }
-                #endregion
-
-
+                await DownloadPage(question_data, conn);
             }
         }
+        private static async Task<bool> DownloadPage(Question_Struct question_data, SqlConnection conn, int retry = 3)
+        {
+            Console.WriteLine("downpage");
+            #region 下载页面
+            HttpResponseMessage rsp = await _Http_Get(question_data);
+            if (rsp.StatusCode != System.Net.HttpStatusCode.OK || rsp is null)
+            {
+                Console.WriteLine($"{question_data.Question_id}\t{question_data.Offset}\t{question_data.Limit}  下载失败,重试...");
+                return await DownloadPage(question_data,conn, retry - 1);
+            }
+            string rspdata = await rsp.Content.ReadAsStringAsync();
+            #endregion
 
+            #region 解析js
+            //var x = JsonSerializer.Deserialize<json_class.Root>(ddd);
+            JsonDocument json_obj = JsonDocument.Parse(rspdata);   //解析js
+            #endregion
+
+            #region 解析data
+            JsonElement json_data = json_obj.RootElement.GetProperty("data");  //获取data
+
+            if (json_data.GetArrayLength() != 0)
+            {
+                #region 读取题目信息并保存
+                json_class.Question question = Js2Question(json_data[0]);    //获取问题的详细信息
+                await Sql.Save_Question(question, conn);
+                #endregion
+
+                #region 读取详细信息
+                for (int i = 0; i < json_data.GetArrayLength(); i++)
+                {
+                    //处理作者信息
+                    json_class.Author author = Js2Author(json_data[i]);
+                    await Sql.Update_Author(author, conn);  //更新或插入作者信息
+
+                    //处理回答信息
+                    json_class.Answer answer = Js2Answer(json_data[i],author.Id,question.Id);
+                    await Sql.Save_Answer(answer, conn);  //保存回答信息
+                }
+                #endregion
+            }
+            #endregion
+
+            #region 解析游标信息
+            json_data = json_obj.RootElement.GetProperty("paging");  //获取data
+            json_class.Paging paging = Js2Paging(json_data);
+            if (paging.Is_end != true && (question_data.Offset + question_data.Limit) < 100)
+            {
+                Question_Struct new_question_struct = question_data;
+                new_question_struct.Offset = new_question_struct.Offset + new_question_struct.Limit;
+                return await DownloadPage(new_question_struct, conn);
+            }
+            #endregion
+
+            return true;
+        }
+
+        
         private static async Task<HttpResponseMessage> _Http_Get(Question_Struct inputdata,byte num = 3)
         {
             if (num < 0)
@@ -151,19 +180,58 @@ namespace Spider
             return author;
         }
     
-        private static json_class.Answer Js2Answer(JsonElement json_obj)
+        private static json_class.Answer Js2Answer(JsonElement json_obj,string Author_Id,int Question_Id)
         {
             json_class.Answer answer = new json_class.Answer()
             {
-                Id = 1,
+                Id = json_obj.GetProperty("id").GetInt32(),
+                Author_Id = Author_Id,
+                Question_Id = Question_Id,
+
+                Type = json_obj.GetProperty("type").GetString(),
+                Answer_Type = json_obj.GetProperty("answer_type").GetString(),
+                Url = json_obj.GetProperty("url").GetString(),
+                Is_Collapsed = json_obj.GetProperty("is_collapsed").GetBoolean(),
+                Created_Time = json_obj.GetProperty("created_time").GetInt32(),
+                Updated_Time = json_obj.GetProperty("updated_time").GetInt32(),
+                Extras = json_obj.GetProperty("extras").GetString(),
+                Is_Copyable = json_obj.GetProperty("is_copyable").GetBoolean(),
+                Is_Normal = json_obj.GetProperty("is_normal").GetBoolean(),
+                Voteup_Count = json_obj.GetProperty("voteup_count").GetInt32(),
+                Comment_Count = json_obj.GetProperty("comment_count").GetInt32(),
+                Is_Sticky = json_obj.GetProperty("is_sticky").GetBoolean(),
+                Admin_Closed_Comment = json_obj.GetProperty("admin_closed_comment").GetBoolean(),
+                Comment_Permission = json_obj.GetProperty("comment_permission").GetString(),
+                Reshipment_Settings = json_obj.GetProperty("reshipment_settings").GetString(),
+                Content = json_obj.GetProperty("content").GetString(),
+                Editable_Content = json_obj.GetProperty("editable_content").GetString(),
+                Excerpt = json_obj.GetProperty("excerpt").GetString(),
+                Collapsed_By = json_obj.GetProperty("collapsed_by").GetString(),
+                Collapse_Reason = json_obj.GetProperty("collapse_reason").GetString(),
+                Annotation_Action = json_obj.GetProperty("annotation_action").GetString(),
+                Is_Labeled = json_obj.GetProperty("is_labeled").GetBoolean(),
             };
 
 
             return answer;
         }
+
+        private static json_class.Paging Js2Paging(JsonElement json_obj)
+        {
+            Paging paging = new Paging()
+            {
+                Is_end = json_obj.GetProperty("is_end").GetBoolean(),
+                Is_start = json_obj.GetProperty("is_start").GetBoolean(),
+                Next = json_obj.GetProperty("next").GetString(),
+                Previous = json_obj.GetProperty("previous").GetString(),
+                Totals = json_obj.GetProperty("totals").GetInt32(),
+            };
+            return paging;
+            
+        }
     }
 
-    struct Question_Struct: IHttp_Get_Interface
+    public struct Question_Struct: IHttp_Get_Interface
     {
         
         public Question_Struct(string question_id, int offset, int limit = 5, string include = "", string sort_by = "default", string platform = "desktop", string url = "")

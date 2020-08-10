@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -12,6 +13,8 @@ namespace Spider.json_class
         /// 回答id
         /// </summary>
         public int Id { get; set; }
+        public string Author_Id { get; set; }
+        public int Question_Id { get; set; }
         /// <summary>
         /// 类型
         /// </summary>
@@ -203,5 +206,13 @@ namespace Spider.json_class
         
     }
 
+    public class Paging
+    {
+        public bool Is_end;
+        public bool Is_start;
+        public string Next;
+        public string Previous;
+        public int Totals;
 
+    }
 }

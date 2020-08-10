@@ -17,8 +17,9 @@ namespace Spider
         {
             Question_Struct question_Struct = new Question_Struct("29843358", 0);
 
-            Question.question_queue.Enqueue(question_Struct);
-            await Question.Run();
+            //Question.question_queue.Enqueue(question_Struct);
+            Question.question_queue.Add(question_Struct);
+            await Question.Run(true);
             
         }
     }
