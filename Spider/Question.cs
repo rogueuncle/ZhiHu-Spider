@@ -19,33 +19,40 @@ namespace Spider
         //public static Queue<Question_Struct> question_queue = new Queue<Question_Struct>();
         public static BlockingCollection<Question_Struct> question_queue = new BlockingCollection<Question_Struct>();
 
-        public static async Task Run(bool s)
+        public static async Task Run()
         {
-            SqlConnection conn = Sql._Get_Connection();
-            while (true)
+            Console.WriteLine("处理问题线程启动");
+            //SqlConnection conn = Sql._Get_Connection();
+            using (SqlConnection conn = Sql._Get_Connection())
             {
-                //Question_Struct question_data = question_queue.Dequeue();
-                Question_Struct question_data = question_queue.Take();
-
-                #region 判断当前问题是否已经爬取
-                SqlCommand cur = conn.CreateCommand();
-                cur.CommandText = "select count(id) from Question where id = @id";
-                cur.Parameters.AddWithValue("@id", question_data.Question_id);
-                int _question_count = (int)await cur.ExecuteScalarAsync();
-                if (_question_count == 1)
+                while (true)
                 {
-                    Sql.Put_SqlConnection(conn);
-                    cur.Dispose();
-                    continue;
-                }
-                #endregion
+                    //Question_Struct question_data = question_queue.Dequeue();
+                    Question_Struct question_data = question_queue.Take();
+                    Console.WriteLine("获取到一个问题对象!");
 
-                await DownloadPage(question_data, conn);
+                    #region 判断当前问题是否已经爬取
+                    SqlCommand cur = conn.CreateCommand();
+                    cur.CommandText = "select count(id) from Question where id = @id";
+                    cur.Parameters.AddWithValue("@id", question_data.Question_id);
+                    int _question_count = (int)await cur.ExecuteScalarAsync();
+                    cur.Dispose();
+                    if (_question_count == 1)
+                    {
+                        //Sql.Put_SqlConnection(conn);
+                        continue;
+                    }
+                    #endregion
+
+                    await DownloadPage(question_data, conn);
+                }
             }
+            
         }
         private static async Task<bool> DownloadPage(Question_Struct question_data, SqlConnection conn, int retry = 3)
         {
-            Console.WriteLine("downpage");
+            Console.WriteLine($"downpage,{question_data.Offset},{question_data.Limit}");
+            
             #region 下载页面
             HttpResponseMessage rsp = await _Http_Get(question_data);
             if (rsp.StatusCode != System.Net.HttpStatusCode.OK || rsp is null)
@@ -68,7 +75,13 @@ namespace Spider
             {
                 #region 读取题目信息并保存
                 json_class.Question question = Js2Question(json_data[0]);    //获取问题的详细信息
-                await Sql.Save_Question(question, conn);
+
+                if (question_data.IsNew)
+                {
+                    await Sql.Save_Question(question, conn);
+                }
+                
+                
                 #endregion
 
                 #region 读取详细信息
@@ -91,8 +104,10 @@ namespace Spider
             json_class.Paging paging = Js2Paging(json_data);
             if (paging.Is_end != true && (question_data.Offset + question_data.Limit) < 100)
             {
-                Question_Struct new_question_struct = question_data;
-                new_question_struct.Offset = new_question_struct.Offset + new_question_struct.Limit;
+                
+                Question_Struct new_question_struct = new Question_Struct(question_data.Question_id, question_data.Offset + question_data.Limit,isnew:false);
+
+                new_question_struct.Offset = question_data.Offset + question_data.Limit;
                 return await DownloadPage(new_question_struct, conn);
             }
             #endregion
@@ -234,7 +249,7 @@ namespace Spider
     public struct Question_Struct: IHttp_Get_Interface
     {
         
-        public Question_Struct(string question_id, int offset, int limit = 5, string include = "", string sort_by = "default", string platform = "desktop", string url = "")
+        public Question_Struct(string question_id, int offset, int limit = 5, string include = "", string sort_by = "default", string platform = "desktop", string url = "",bool isnew=true)
         {
             this.Question_id = question_id;
             this.Include = include != "" ? include : "data%5B%2A%5D.is_normal%2Cadmin_closed_comment%2Creward_info%2Cis_collapsed%2Cannotation_action%2Cannotation_detail%2Ccollapse_reason%2Cis_sticky%2Ccollapsed_by%2Csuggest_edit%2Ccomment_count%2Ccan_comment%2Ccontent%2Ceditable_content%2Cvoteup_count%2Creshipment_settings%2Ccomment_permission%2Ccreated_time%2Cupdated_time%2Creview_info%2Crelevant_info%2Cquestion%2Cexcerpt%2Crelationship.is_authorized%2Cis_author%2Cvoting%2Cis_thanked%2Cis_nothelp%2Cis_labeled%2Cis_recognized%2Cpaid_info%2Cpaid_info_content%3Bdata%5B%2A%5D.mark_infos%5B%2A%5D.url%3Bdata%5B%2A%5D.author.follower_count%2Cbadge%5B%2A%5D.topics";
@@ -243,6 +258,7 @@ namespace Spider
             this.Platform = platform;
             this.Sort_by = sort_by;
             this.Url = url != "" ? url : $"https://www.zhihu.com/api/v4/questions/{question_id}/answers?include={Include}&limit={limit}&offset={offset}&platform={platform}&sort_by={sort_by}";
+            this.IsNew = isnew;
         }
 
         public string Question_id { get; set; }
@@ -252,7 +268,22 @@ namespace Spider
         public string Platform { get; set; }
         public string Sort_by { get; set; }
         public string Url { get; set; }
+
+        public bool IsNew { get; }
     }
 
-
+    public struct HaveQuestions : IHttp_Get_Interface
+    {
+        public HaveQuestions(string question_id, int limit = 5, string include = "")
+        {
+            this.Question_id = question_id;
+            this.Limit = limit;
+            this.Include = include != "" ? include : "data%5B*%5D.answer_count%2Cauthor%2Cfollower_count";
+            this.Url = $"https://www.zhihu.com/api/v4/questions/{question_id}/similar-questions?include={this.Include}&limit={limit}";
+        }
+        public string Question_id { get; set; }
+        public string Url { get; set; }
+        public string Include { get; set; }
+        public int Limit { get; set; }
+    }
 }

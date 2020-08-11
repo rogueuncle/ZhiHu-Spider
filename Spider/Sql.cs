@@ -127,7 +127,6 @@ namespace Spider
 
             SqlDataReader data = await cur.ExecuteReaderAsync();
             bool _state = data.Read();
-            data.Close();
             if (_state)
             {
                 //作者存在，更新作者信息
@@ -141,9 +140,11 @@ namespace Spider
                     cur.Parameters.AddWithValue("@Follower_Count", author_data.Follower_Count);
                     await cur.ExecuteNonQueryAsync();
                 }
+                data.Close();
             }
             else
             {
+                data.Close();
                 //当前作者不存在
                 _sql = "insert into Author(Id,Url_Token,Name,Avatar_Url,Avatar_Url_Template,Is_Org," +
                     "Type,Url,User_Type,Headline,Gender,Is_Advertiser,Follower_Count,Is_Followed,Is_Privacy) " +
