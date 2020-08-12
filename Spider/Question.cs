@@ -29,7 +29,7 @@ namespace Spider
                 {
                     //Question_Struct question_data = question_queue.Dequeue();
                     Question_Struct question_data = question_queue.Take();
-                    Console.WriteLine("获取到一个问题对象!");
+                    Console.WriteLine($"获取到一个问题对象,{question_data.Question_id}\t{Question.question_queue.Count}");
 
                     #region 判断当前问题是否已经爬取
                     SqlCommand cur = conn.CreateCommand();
@@ -40,6 +40,7 @@ namespace Spider
                     if (_question_count == 1)
                     {
                         //Sql.Put_SqlConnection(conn);
+                        Console.WriteLine($"{question_data.Question_id} 已存在!");
                         continue;
                     }
                     #endregion

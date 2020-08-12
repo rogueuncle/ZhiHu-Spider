@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Runtime.InteropServices;
+using System.Data.SqlClient;
 
 namespace Spider
 {
@@ -22,14 +23,24 @@ namespace Spider
             //Question.question_queue.Enqueue(question_Struct);
             //Question.question_queue.Add(question_Struct);
             
-            HaveQuestions data = new HaveQuestions("29843358");
+            HaveQuestions data = new HaveQuestions("377119809");
             HaveQuestions.Add(data);
 
-            var t = Task.Run(() => { Question.Run(); });
-            var t1 = Task.Run(() => { HRange(); });
+            var t0 = Task.Run(() => { Question.Run(); });
+            var t1 = Task.Run(() => { Question.Run(); });
+            var t2 = Task.Run(() => { Question.Run(); });
+            var t3 = Task.Run(() => { Question.Run(); });
+            var t4 = Task.Run(() => { Question.Run(); });
+
+            var h = Task.Run(() => { HRange(); });
         
+            t0.Wait();
             t1.Wait();
-            t.Wait();
+            t2.Wait();
+            t3.Wait();
+            t4.Wait();
+
+            h.Wait();
 
             //var h = new Task(HRanges,TaskCreationOptions.LongRunning);
             //h.Start();
@@ -62,10 +73,15 @@ namespace Spider
         public static async Task HRange()
         {
             Console.WriteLine("联想线程启动!");
+            SqlConnection conn = Sql._Get_Connection();
             while (true)
             {
                 var data = HaveQuestions.Take();
-                Console.WriteLine("获取到一个联想对象");
+                Console.WriteLine($"获取到一个联想对象,{HaveQuestions.Count}\t{Question.question_queue.Count}");
+                Question.question_queue.Add(new Question_Struct(data.Question_id, 0));
+
+                if (await Sql.question_is_cz(conn, data.Question_id)) continue;
+
                 for (int i = 0; i < 3; i++)
                 {
                     var rsp = await HttpCli.Get(data);

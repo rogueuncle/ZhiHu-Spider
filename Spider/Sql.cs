@@ -185,5 +185,25 @@ namespace Spider
             return true;
 
         }
+
+        public static async Task<bool> question_is_cz(SqlConnection conn, string Question_id)
+        {
+            
+            SqlCommand cur = conn.CreateCommand();
+            cur.CommandText = "select count(id) from Question where id = @id";
+            cur.Parameters.AddWithValue("@id", Question_id);
+            int _question_count = (int)await cur.ExecuteScalarAsync();
+            cur.Dispose();
+            if (_question_count == 1)
+            {
+                //Sql.Put_SqlConnection(conn);
+                Console.WriteLine($"{Question_id} 已存在!");
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
     }
 }
