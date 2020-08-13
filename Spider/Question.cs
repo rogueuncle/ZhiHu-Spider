@@ -55,8 +55,9 @@ namespace Spider
             Console.WriteLine($"downpage,{question_data.Offset},{question_data.Limit}");
             
             #region 下载页面
-            HttpResponseMessage rsp = await _Http_Get(question_data);
-            if (rsp.StatusCode != System.Net.HttpStatusCode.OK || rsp is null)
+            HttpResponseMessage rsp = await _Http_Get(question_data,retry);
+            if (rsp is null)  return false;
+            if (rsp.StatusCode != System.Net.HttpStatusCode.OK)
             {
                 Console.WriteLine($"{question_data.Question_id}\t{question_data.Offset}\t{question_data.Limit}  下载失败,重试...");
                 return await DownloadPage(question_data,conn, retry - 1);
@@ -117,7 +118,7 @@ namespace Spider
         }
 
         
-        private static async Task<HttpResponseMessage> _Http_Get(Question_Struct inputdata,byte num = 3)
+        private static async Task<HttpResponseMessage> _Http_Get(Question_Struct inputdata,int num = 3)
         {
             if (num < 0)
             {
@@ -258,7 +259,7 @@ namespace Spider
             this.Offset = offset;
             this.Platform = platform;
             this.Sort_by = sort_by;
-            this.Url = url != "" ? url : $"https://www.zhihu.com/api/v4/questions/{question_id}/answers?include={Include}&limit={limit}&offset={offset}&platform={platform}&sort_by={sort_by}";
+            this.Url = url != "" ? url : $"http://www.zhihu.com/api/v4/questions/{question_id}/answers?include={Include}&limit={limit}&offset={offset}&platform={platform}&sort_by={sort_by}";
             this.IsNew = isnew;
         }
 
@@ -280,7 +281,7 @@ namespace Spider
             this.Question_id = question_id;
             this.Limit = limit;
             this.Include = include != "" ? include : "data%5B*%5D.answer_count%2Cauthor%2Cfollower_count";
-            this.Url = $"https://www.zhihu.com/api/v4/questions/{question_id}/similar-questions?include={this.Include}&limit={limit}";
+            this.Url = $"http://www.zhihu.com/api/v4/questions/{question_id}/similar-questions?include={this.Include}&limit={limit}";
         }
         public string Question_id { get; set; }
         public string Url { get; set; }
