@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net.Http;
 using System.Text.Json;
-using Spider.json_class;
 using System.Data.SqlClient;
 using System.Collections.Concurrent;
 
@@ -76,7 +75,7 @@ namespace Spider
             if (json_data.GetArrayLength() != 0)
             {
                 #region 读取题目信息并保存
-                json_class.Question question = Js2Question(json_data[0]);    //获取问题的详细信息
+                Js_Question question = Js2Question(json_data[0]);    //获取问题的详细信息
 
                 if (question_data.IsNew)
                 {
@@ -90,11 +89,11 @@ namespace Spider
                 for (int i = 0; i < json_data.GetArrayLength(); i++)
                 {
                     //处理作者信息
-                    json_class.Author author = Js2Author(json_data[i]);
+                    Js_Author author = Js2Author(json_data[i]);
                     await Sql.Update_Author(author, conn);  //更新或插入作者信息
 
                     //处理回答信息
-                    json_class.Answer answer = Js2Answer(json_data[i],author.Id,question.Id);
+                    Js_Answer answer = Js2Answer(json_data[i],author.Id,question.Id);
                     await Sql.Save_Answer(answer, conn);  //保存回答信息
                 }
                 #endregion
@@ -103,7 +102,7 @@ namespace Spider
 
             #region 解析游标信息
             json_data = json_obj.RootElement.GetProperty("paging");  //获取data
-            json_class.Paging paging = Js2Paging(json_data);
+            Js_Paging paging = Js2Paging(json_data);
             if (paging.Is_end != true && (question_data.Offset + question_data.Limit) < 100)
             {
                 
@@ -141,10 +140,10 @@ namespace Spider
         /// </summary>
         /// <param name="json_obj">json对象</param>
         /// <returns>返回Question对象</returns>
-        private static json_class.Question Js2Question(JsonElement json_obj)
+        private static Js_Question Js2Question(JsonElement json_obj)
         {
             JsonElement question_obj = json_obj.GetProperty("question");
-            json_class.Question question = new json_class.Question();
+            Js_Question question = new Js_Question();
             
             question.Id = question_obj.GetProperty("id").GetInt32();
             question.Type = question_obj.GetProperty("type").GetString();
@@ -164,10 +163,10 @@ namespace Spider
         /// </summary>
         /// <param name="json_obj">json对象</param>
         /// <returns>Author</returns>
-        private static json_class.Author Js2Author(JsonElement json_obj)
+        private static Js_Author Js2Author(JsonElement json_obj)
         {
             JsonElement Author_obj = json_obj.GetProperty("author");
-            json_class.Author author = new json_class.Author();
+            Js_Author author = new Js_Author();
 
             author.Id = Author_obj.GetProperty("id").GetString();
             author.Url_Token = Author_obj.GetProperty("url_token").GetString();
@@ -197,9 +196,9 @@ namespace Spider
             return author;
         }
     
-        private static json_class.Answer Js2Answer(JsonElement json_obj,string Author_Id,int Question_Id)
+        private static Js_Answer Js2Answer(JsonElement json_obj,string Author_Id,int Question_Id)
         {
-            json_class.Answer answer = new json_class.Answer()
+            Js_Answer answer = new Js_Answer()
             {
                 Id = json_obj.GetProperty("id").GetInt32(),
                 Author_Id = Author_Id,
@@ -233,9 +232,9 @@ namespace Spider
             return answer;
         }
 
-        private static json_class.Paging Js2Paging(JsonElement json_obj)
+        private static Js_Paging Js2Paging(JsonElement json_obj)
         {
-            Paging paging = new Paging()
+            Js_Paging paging = new Js_Paging()
             {
                 Is_end = json_obj.GetProperty("is_end").GetBoolean(),
                 Is_start = json_obj.GetProperty("is_start").GetBoolean(),

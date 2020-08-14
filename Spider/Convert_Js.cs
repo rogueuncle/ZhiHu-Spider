@@ -5,31 +5,37 @@ using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Spider.json_class
+namespace Spider
 {
-    public class Answer
+    /// <summary>
+    /// 把js对象转换为表示回答信息的类
+    /// </summary>
+    public class Js_Answer
     {
         /// <summary>
         /// 回答id
         /// </summary>
         public int Id { get; set; }
+        /// <summary>
+        /// 作者id
+        /// </summary>
         public string Author_Id { get; set; }
+        /// <summary>
+        /// 问题id
+        /// </summary>
         public int Question_Id { get; set; }
         /// <summary>
         /// 类型
         /// </summary>
         public string Type { get; set; }
         /// <summary>
-        /// 
+        /// 回答类型
         /// </summary>
         public string Answer_Type { get; set; }
         /// <summary>
         /// api网址
         /// </summary>
         public string Url { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public bool Is_Collapsed { get; set; }
         /// <summary>
         /// 创建时间
@@ -39,17 +45,8 @@ namespace Spider.json_class
         /// 更新时间
         /// </summary>
         public int Updated_Time { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public string Extras { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public bool Is_Copyable { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public bool Is_Normal { get; set; }
         /// <summary>
         /// 点赞数量
@@ -59,54 +56,29 @@ namespace Spider.json_class
         /// 评论数据
         /// </summary>
         public int Comment_Count { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public bool Is_Sticky { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public bool Admin_Closed_Comment { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public string Comment_Permission { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public string Reshipment_Settings { get; set; }
         /// <summary>
         /// 内容
         /// </summary>
         public string Content { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public string Editable_Content { get; set; }
         /// <summary>
         /// 内容摘录
         /// </summary>
         public string Excerpt { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public string Collapsed_By { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public string Collapse_Reason { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public string Annotation_Action { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public bool Is_Labeled { get; set; }
     }
-
-
-    public class Author
+    
+    /// <summary>
+    /// 把js对象转换为表示作者信息的类
+    /// </summary>
+    public class Js_Author
     {
         /// <summary>
         /// 用户id
@@ -128,50 +100,28 @@ namespace Spider.json_class
         /// 头像模板
         /// </summary>
         public string Avatar_Url_Template { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public bool Is_Org { get; set; }
         /// <summary>
         /// 用户类型
         /// </summary>
         public string Type { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public string Url { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public string User_Type { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public string Headline { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public int Gender { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public bool Is_Advertiser { get; set; }
         /// <summary>
         /// 粉丝数量
         /// </summary>
         public int Follower_Count { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public bool Is_Followed { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
         public bool Is_Privacy { get; set; }
     }
-
-
-    public class Question
+    
+    /// <summary>
+    /// 把js对象转换为表示问题信息的类
+    /// </summary>
+    public class Js_Question
     {
         /// <summary>
         /// 类型
@@ -203,10 +153,13 @@ namespace Spider.json_class
         public string Url { get; set; }
 
         public string Relationship { get; set; }
-        
+
     }
 
-    public class Paging
+    /// <summary>
+    /// 把js对象转换为表示游标信息的类
+    /// </summary>
+    public class Js_Paging
     {
         public bool Is_end;
         public bool Is_start;

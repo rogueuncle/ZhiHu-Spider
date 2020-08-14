@@ -4,61 +4,86 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using System.Net;
 
 namespace Spider
 {
     class HttpCli
     {
-        public static async Task<HttpResponseMessage> Get(IHttp_Get_Interface question_data)
+        /// <summary>
+        /// 更新协议头
+        /// </summary>
+        /// <param name="headers">httpclient对象的协议头对象</param>
+        /// <returns></returns>
+        private static bool Put_Headers(System.Net.Http.Headers.HttpRequestHeaders headers)
         {
-
-            HttpClient client = new HttpClient();
-            HttpRequestMessage httpRequestMessage = new HttpRequestMessage();
             //httpRequestMessage.Headers.Add("User-Agent", @"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.105 Safari/537.36");
-            httpRequestMessage.Headers.Add("User-Agent", @"Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)");
+            headers.Add("User-Agent", @"Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)");
             
-            httpRequestMessage.Headers.Add("X-Forwarded-Proto", @"114.114.114.114");
-            httpRequestMessage.Headers.Add("X-Forwarded-For", @"114.114.114.114");
-            httpRequestMessage.Headers.Add("X-Real-IP", @"114.114.114.114");
-            
-            httpRequestMessage.Method = new HttpMethod("GET");
-            httpRequestMessage.RequestUri = new Uri(question_data.Url);
-
-            HttpResponseMessage rsp = await client.SendAsync(httpRequestMessage);
-            
-            //HttpResponseMessage rsp = await client.GetAsync(question_data.Url);
-            Console.WriteLine(rsp.StatusCode);
-            //var data = await rsp.Content.ReadAsStringAsync();
-            //Console.WriteLine(data);
-            return rsp;
+            //headers.Add("X-Forwarded-Proto", @"114.114.114.114");
+            //headers.Add("X-Forwarded-For", @"114.114.114.114");
+            //headers.Add("X-Real-IP", @"114.114.114.114");
+            return true;
         }
 
-        public static async Task<HttpResponseMessage> Get(string url)
+        /// <summary>
+        /// 访问网页，获取返回值
+        /// </summary>
+        /// <param name="get_data">请求数据</param>
+        /// <param name="timeout">超时时间，默认10秒钟</param>
+        /// <returns></returns>
+        public static HttpResponseMessage Get(IHttp_Get_Interface get_data,int timeout = 10*1000)
         {
-
             HttpClient client = new HttpClient();
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage();
-            httpRequestMessage.Headers.Add("User-Agent", @"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.105 Safari/537.36");
+
+            Put_Headers(httpRequestMessage.Headers);
             httpRequestMessage.Method = new HttpMethod("GET");
-            httpRequestMessage.RequestUri = new Uri(url);
+            httpRequestMessage.RequestUri = new Uri(get_data.Url);
 
-            HttpResponseMessage rsp = await client.SendAsync(httpRequestMessage);
+            Task<HttpResponseMessage> rsp = client.SendAsync(httpRequestMessage);
+            if (rsp.Wait(timeout))
+            {
+                HttpResponseMessage RspMessage = rsp.Result;
+                Console.WriteLine($"{get_data.EventType}\t获取成功\t{RspMessage.StatusCode}");
+                return RspMessage;
+            }
+            else
+            {
+                Console.WriteLine($"{get_data.EventType}\t访问超时");
+                return null;
+            }
+        }
 
-            //HttpResponseMessage rsp = await client.GetAsync(question_data.Url);
-            //Console.WriteLine(rsp.StatusCode);
-            //var data = await rsp.Content.ReadAsStringAsync();
-            //Console.WriteLine(data);
-            return rsp;
+        /// <summary>
+        /// 访问网页，获取返回值
+        /// </summary>
+        /// <param name="get_data">请求数据</param>
+        /// <param name="timeout">超时时间，默认10秒钟</param>
+        /// <returns></returns>
+        public static HttpResponseMessage Get(string url,string eventtype)
+        {
+            _Http_Get _httpget = new _Http_Get()
+            {
+                Url = url,
+                EventType = eventtype
+            };
+
+            return Get(_httpget);
+        }
+
+        private struct _Http_Get : IHttp_Get_Interface
+        {
+            public string Url { get; set; }
+            public string EventType { get; set; }
         }
     }
-    interface IHttp
-    {
-        string User_Args { get; set; }
-    }
+    
 
     interface IHttp_Get_Interface
     {
         string Url { get; set; }
+        string EventType { get; set; }
     }
     interface IHttp_Post_Interface
     {

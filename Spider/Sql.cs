@@ -77,7 +77,7 @@ namespace Spider
         /// <param name="question_data">题目信息对象</param>
         /// <param name="conn"></param>
         /// <returns></returns>
-        public static async Task<bool> Save_Question(json_class.Question question_data,SqlConnection conn)
+        public static async Task<bool> Save_Question(Js_Question question_data,SqlConnection conn)
         {
             SqlCommand cur = conn.CreateCommand();
 
@@ -96,7 +96,7 @@ namespace Spider
             
         }
 
-        public static async Task<bool> Save_Answer(json_class.Answer answer_data, SqlConnection conn)
+        public static async Task<bool> Save_Answer(Js_Answer answer_data, SqlConnection conn)
         {
             SqlCommand cur = conn.CreateCommand();
 
@@ -115,7 +115,7 @@ namespace Spider
 
         }
 
-        public static async Task<bool> Update_Author(json_class.Author author_data, SqlConnection conn)
+        public static async Task<bool> Update_Author(Js_Author author_data, SqlConnection conn)
         {
             Console.WriteLine($"author id:{author_data.Id}");
             SqlCommand cur = conn.CreateCommand();

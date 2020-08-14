@@ -72,7 +72,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="HttpCli.cs" />
-    <Compile Include="json_class\Question.cs" />
+    <Compile Include="Convert_Js.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Question.cs" />
