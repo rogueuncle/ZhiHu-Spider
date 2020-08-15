@@ -10,20 +10,21 @@ using System.Threading;
 using System.Runtime.InteropServices;
 using System.Data.SqlClient;
 using System.Text.RegularExpressions;
+using System.IO;
 
 namespace Spider
 {
     class Program
     {
 
+        private static StreamWriter file = new StreamWriter("./log.txt", true);
+
+        /// <summary>
+        /// 联想队列
+        /// </summary>
         public static BlockingCollection<HaveQuestions> HaveQuestions = new BlockingCollection<HaveQuestions>();
-        static async Task Main(string[] args)
+        static void Main(string[] args)
         {
-
-            //await HSeed();
-            //HaveQuestions data = new HaveQuestions("377119809");
-            //HaveQuestions.Add(data);
-
             List<Task> tasks = new List<Task>();
 
             for (int i = 0; i < 5; i++)
@@ -38,7 +39,7 @@ namespace Spider
             h.Wait();
             s.Wait();
 
-            Console.WriteLine("线程运行完毕");
+            Program.log("线程运行完毕");
 
             Console.ReadKey();
         }
@@ -49,24 +50,32 @@ namespace Spider
         /// <returns></returns>
         public static async Task HRange()
         {
-            Console.WriteLine("联想线程启动!");
-            SqlConnection conn = Sql._Get_Connection();
+            Program.log("联想线程启动!");
+            SqlConnection conn = Sql.Get_Connection();
             while (true)
             {
                 var data = HaveQuestions.Take();
-                Console.WriteLine($"获取到一个联想对象,{HaveQuestions.Count}\t{Question.question_queue.Count}");
-                Question.question_queue.Add(new Question_Struct(data.Question_id, 0));
+                Program.log($"获取到一个联想对象,{HaveQuestions.Count}\t{Question.question_queue.Count}");
 
-                if (await Sql.question_is_cz(conn, data.Question_id)) continue;
+                if (await Sql.InQuestions(conn, data.Question_id)) continue;
+
+                Question.question_queue.Add(new Question_Struct(data.Question_id, 0));
 
                 for (int i = 0; i < 3; i++)
                 {
-                    var rsp = await HttpCli.Get(data);
-                    if (rsp.StatusCode != System.Net.HttpStatusCode.OK)
+                    HttpResponseMessage rsp = HttpCli.Get(data);
+                    if (rsp is null)
                     {
+                        HaveQuestions.Add(data);
                         continue;
                     }
-                    else
+                    if (rsp.StatusCode == System.Net.HttpStatusCode.NotFound) continue;
+                    if (rsp.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                    {
+                        HaveQuestions.Add(data);
+                        continue;
+                    }
+                    if (rsp.StatusCode == System.Net.HttpStatusCode.OK)
                     {
                         string rspdata = await rsp.Content.ReadAsStringAsync();
                         JsonDocument json_obj = JsonDocument.Parse(rspdata);
@@ -79,7 +88,7 @@ namespace Spider
                             {
                                 HaveQuestions.Add(new HaveQuestions(_id));  //添加问题id至联想队列
                                 Question.question_queue.Add(new Question_Struct(_id, 0));  //添加问题id至获取答案队列
-                                Console.WriteLine($"添加至队列,id:{_id},count:{_answer_count}");
+                                Program.log($"添加至队列,id:{_id},count:{_answer_count}");
                             }
                         }
 
@@ -91,7 +100,6 @@ namespace Spider
                             }
                             else
                             {
-                                //System.Threading.Thread.Sleep(10 * 1000);
                                 await Task.Delay(3 * 1000);
                             }
                         }
@@ -101,13 +109,16 @@ namespace Spider
             
         }
 
-
+        /// <summary>
+        /// 种子线程
+        /// </summary>
+        /// <returns></returns>
         public static async Task HSeed()
         {
-            Console.WriteLine("种子线程启动!");
-            string url = "https://www.zhihu.com/explore";
-            string find_s_s = "<script id=\"js-initialData\" type=\"text/json\">";
-            string find_e_s = "</script>";
+            Program.log("种子线程启动!");
+            //string url = "https://www.zhihu.com/explore";
+            //string find_s_s = "<script id=\"js-initialData\" type=\"text/json\">";
+            //string find_e_s = "</script>";
             Random random = new Random((int)DateTime.Now.Ticks);
             
             while (true)
@@ -161,9 +172,10 @@ namespace Spider
                 //    }
                 //}
 
-                HaveQuestions.Add(new HaveQuestions(random.Next(19620867, 452241719).ToString()));
-                HaveQuestions.Add(new HaveQuestions(random.Next(19620867, 452241719).ToString()));
-                HaveQuestions.Add(new HaveQuestions(random.Next(19620867, 452241719).ToString()));
+                for (int i = 0; i < 5; i++)
+                {
+                    HaveQuestions.Add(new HaveQuestions(random.Next(10086, 452241719).ToString()));
+                }
 
                 await Task.Delay(10 * 1000);
 
@@ -171,18 +183,27 @@ namespace Spider
                 {
                     if (HaveQuestions.Count == 0)
                     {
-                        Console.WriteLine("队列为空，重新采取种子");
+                        Program.log("队列为空，重新采取种子");
                         break;
                     }
                     else
                     {
-                        await Task.Delay(10 * 1000);
+                        await Task.Delay(3 * 1000);
                     }
                 }
             }
         }
-    
+
+        public static void log(string text)
+        {
+
+            string str = $"{Task.CurrentId}  {DateTime.Now}\t{text}";
+            Console.WriteLine(str);
+            file.WriteLine(str);
+            file.Flush();
+        }
+
     }
 
-
+    
 }

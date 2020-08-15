@@ -5,11 +5,26 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Net;
+using System.Runtime.CompilerServices;
 
 namespace Spider
 {
     class HttpCli
     {
+        private static object Lock = true;
+        /// <summary>
+        /// 当前访问计数
+        /// </summary>
+        public static int Count = 0;
+        /// <summary>
+        /// 最大允许的持续访问次数
+        /// </summary>
+        public static int MaxCount = 100;
+        /// <summary>
+        /// 延迟时间,毫秒
+        /// </summary>
+        public static int SleepTime = 60 * 1000;
+
         /// <summary>
         /// 更新协议头
         /// </summary>
@@ -34,6 +49,21 @@ namespace Spider
         /// <returns></returns>
         public static HttpResponseMessage Get(IHttp_Get_Interface get_data,int timeout = 10*1000)
         {
+            lock (Lock)
+            {
+                if (Count > MaxCount)
+                {
+                    Program.log("达到访问限制条件!");
+                    Task.Delay(SleepTime).Wait();
+                    Count = 0;
+                }
+                else
+                {
+                    Count++;
+                }
+            }
+
+
             HttpClient client = new HttpClient();
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage();
 
@@ -45,12 +75,12 @@ namespace Spider
             if (rsp.Wait(timeout))
             {
                 HttpResponseMessage RspMessage = rsp.Result;
-                Console.WriteLine($"{get_data.EventType}\t获取成功\t{RspMessage.StatusCode}");
+                Program.log($"{get_data.EventType}\t获取成功\t{RspMessage.StatusCode}");
                 return RspMessage;
             }
             else
             {
-                Console.WriteLine($"{get_data.EventType}\t访问超时");
+                Program.log($"{get_data.EventType}\t访问超时");
                 return null;
             }
         }

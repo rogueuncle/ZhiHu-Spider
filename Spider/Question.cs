@@ -13,33 +13,25 @@ namespace Spider
     class Question
     {
         /// <summary>
-        /// 问题的先进先出
+        /// 问题队列
         /// </summary>
-        //public static Queue<Question_Struct> question_queue = new Queue<Question_Struct>();
         public static BlockingCollection<Question_Struct> question_queue = new BlockingCollection<Question_Struct>();
 
         public static async Task Run()
         {
-            Console.WriteLine("处理问题线程启动");
-            //SqlConnection conn = Sql._Get_Connection();
-            using (SqlConnection conn = Sql._Get_Connection())
+            Program.log("处理问题线程启动");
+
+            using (SqlConnection conn = Sql.Get_Connection())
             {
                 while (true)
                 {
-                    //Question_Struct question_data = question_queue.Dequeue();
                     Question_Struct question_data = question_queue.Take();
-                    Console.WriteLine($"获取到一个问题对象,{question_data.Question_id}\t{Question.question_queue.Count}");
+                    Program.log($"获取到一个问题对象,{question_data.Question_id}\t{Question.question_queue.Count}");
 
                     #region 判断当前问题是否已经爬取
-                    SqlCommand cur = conn.CreateCommand();
-                    cur.CommandText = "select count(id) from Question where id = @id";
-                    cur.Parameters.AddWithValue("@id", question_data.Question_id);
-                    int _question_count = (int)await cur.ExecuteScalarAsync();
-                    cur.Dispose();
-                    if (_question_count == 1)
+                    var _state = await Sql.InQuestions(conn, question_data.Question_id);
+                    if (_state)
                     {
-                        //Sql.Put_SqlConnection(conn);
-                        Console.WriteLine($"{question_data.Question_id} 已存在!");
                         continue;
                     }
                     #endregion
@@ -51,14 +43,15 @@ namespace Spider
         }
         private static async Task<bool> DownloadPage(Question_Struct question_data, SqlConnection conn, int retry = 3)
         {
-            Console.WriteLine($"downpage,{question_data.Offset},{question_data.Limit}");
+            Program.log($"下载页面 {question_data.Question_id}\t{question_data.Offset},{question_data.Limit}");
             
             #region 下载页面
             HttpResponseMessage rsp = await _Http_Get(question_data,retry);
             if (rsp is null)  return false;
+
             if (rsp.StatusCode != System.Net.HttpStatusCode.OK)
             {
-                Console.WriteLine($"{question_data.Question_id}\t{question_data.Offset}\t{question_data.Limit}  下载失败,重试...");
+                Program.log($"{question_data.Question_id}\t{question_data.Offset}\t{question_data.Limit}\t{rsp.StatusCode}  下载失败,重试...");
                 return await DownloadPage(question_data,conn, retry - 1);
             }
             string rspdata = await rsp.Content.ReadAsStringAsync();
@@ -79,7 +72,16 @@ namespace Spider
 
                 if (question_data.IsNew)
                 {
-                    await Sql.Save_Question(question, conn);
+                    try
+                    {
+                        await Sql.Save_Question(question, conn);
+                    }
+                    catch (Exception e)
+                    {
+                        Program.log($"保存问题失败\t{e.Message}");
+                        return false;
+                    }
+                    
                 }
                 
                 
@@ -124,12 +126,30 @@ namespace Spider
                 return null;
             }
             #region 发送http请求并读取返回值
-            HttpResponseMessage rsp = await HttpCli.Get(inputdata);
+            HttpResponseMessage rsp;
+            try
+            {
+                rsp = HttpCli.Get(inputdata);
+            }
+            catch (Exception e)
+            {
+                Program.log($"Http请求发生错误,问题id:{inputdata.Question_id}\t{e.Message}");
+                return await _Http_Get(inputdata, num - 1);
+            }
+
+            if (rsp is null) return null;
+
             if (rsp.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
+                Program.log($"问题不存在,{inputdata.Question_id}");
                 return null;
             }
-            string rspdata = await rsp.Content.ReadAsStringAsync();
+            if (rsp.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                Program.log($"403访问被拒绝\t执行次数{HttpCli.Count}\t问题id:{inputdata.Question_id}");
+                //question_queue.Add(inputdata);  //把当前数据再次添加到队列中，等待重试,在获取第二页的时候会导致错误
+                return null;
+            }
 
             return rsp;
             #endregion
@@ -260,6 +280,7 @@ namespace Spider
             this.Sort_by = sort_by;
             this.Url = url != "" ? url : $"http://www.zhihu.com/api/v4/questions/{question_id}/answers?include={Include}&limit={limit}&offset={offset}&platform={platform}&sort_by={sort_by}";
             this.IsNew = isnew;
+            this.EventType = "获取答案列表";
         }
 
         public string Question_id { get; set; }
@@ -269,8 +290,8 @@ namespace Spider
         public string Platform { get; set; }
         public string Sort_by { get; set; }
         public string Url { get; set; }
-
         public bool IsNew { get; }
+        public string EventType { get; set; }
     }
 
     public struct HaveQuestions : IHttp_Get_Interface
@@ -281,10 +302,12 @@ namespace Spider
             this.Limit = limit;
             this.Include = include != "" ? include : "data%5B*%5D.answer_count%2Cauthor%2Cfollower_count";
             this.Url = $"http://www.zhihu.com/api/v4/questions/{question_id}/similar-questions?include={this.Include}&limit={limit}";
+            this.EventType = "联想问题";
         }
         public string Question_id { get; set; }
         public string Url { get; set; }
         public string Include { get; set; }
         public int Limit { get; set; }
+        public string EventType { get; set; }
     }
 }

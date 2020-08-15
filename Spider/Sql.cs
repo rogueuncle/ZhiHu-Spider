@@ -4,71 +4,23 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using System.Windows.Forms;
 
 namespace Spider
 {
     public static class Sql
     {
-        private static List<SqlConnection> sql_pool = new List<SqlConnection>();
-        private static object Lock = true;
-
         public const string connection_str = "Server=(local);Database=ZhiHu;User Id=sa;Password=sa123456789;";   //数据库连接字符串
-        private const int pool_num = 10;   //连接池的上限
-        
+
         /// <summary>
         /// 生成新的数据库连接
         /// </summary>
         /// <returns></returns>
-        public static SqlConnection _Get_Connection()
+        public static SqlConnection Get_Connection()
         {
             SqlConnection conn = new SqlConnection(connection_str);
             conn.Open();
             return conn;
-        }
-
-        /// <summary>
-        /// 从池中获取数据库连接
-        /// </summary>
-        /// <returns></returns>
-        public static SqlConnection Get_SqlConnection()
-        {
-            lock (Lock)
-            {
-                if (sql_pool.Count >= 1)
-                {
-                    SqlConnection conn = sql_pool[0];
-                    sql_pool.RemoveAt(0);
-                    return conn;
-                }
-                else
-                {
-                    return _Get_Connection();
-                }
-            }
-        }
-
-        /// <summary>
-        /// 返回数据库连接到连接池中
-        /// </summary>
-        /// <param name="conn"></param>
-        /// <returns></returns>
-        public static bool Put_SqlConnection(SqlConnection conn)
-        {
-            lock (Lock)
-            {
-                if (sql_pool.Count >= pool_num)
-                {
-                    conn.Close();
-                    conn.Dispose();
-                    return true;
-                }
-                else
-                {
-                    sql_pool.Add(conn);
-                    return true;
-                }
-            }
         }
 
         /// <summary>
@@ -77,7 +29,7 @@ namespace Spider
         /// <param name="question_data">题目信息对象</param>
         /// <param name="conn"></param>
         /// <returns></returns>
-        public static async Task<bool> Save_Question(Js_Question question_data,SqlConnection conn)
+        public static async Task<bool> Save_Question(Js_Question question_data, SqlConnection conn)
         {
             SqlCommand cur = conn.CreateCommand();
 
@@ -91,13 +43,28 @@ namespace Spider
 
             cur.CommandText = $"insert into Question({_sql_s.Substring(0, _sql_s.Length - 1)}) values({_sql_e.Substring(0, _sql_e.Length - 1)})";
 
-            int state = await cur.ExecuteNonQueryAsync();
-            return state > 0;
-            
+            Program.log($"插入问题,id:{question_data.Id}");
+
+            try
+            {
+                int state = await cur.ExecuteNonQueryAsync();
+                return state > 0;
+            }
+            catch (Exception e)
+            {
+                Program.log($"插入失败,id:{question_data.Id}\t{e.Message}");
+                //MessageBox.Show(question_data.Id.ToString());
+                throw;
+            }
+            finally
+            {
+                cur.Dispose();
+            }
         }
 
         public static async Task<bool> Save_Answer(Js_Answer answer_data, SqlConnection conn)
         {
+            Program.log($"保存回答信息\t{answer_data.Question_Id}\t{answer_data.Id}");
             SqlCommand cur = conn.CreateCommand();
 
             string _sql_s = "";
@@ -117,13 +84,12 @@ namespace Spider
 
         public static async Task<bool> Update_Author(Js_Author author_data, SqlConnection conn)
         {
-            Console.WriteLine($"author id:{author_data.Id}");
+            Program.log($"更新作者信息 id:{author_data.Id}");
             SqlCommand cur = conn.CreateCommand();
 
             string _sql = "select Name,Follower_Count from Author where Id = @id";
             cur.CommandText = _sql;
             cur.Parameters.AddWithValue("@Id", author_data.Id).SqlDbType = System.Data.SqlDbType.NVarChar;
-            //cur.Parameters.AddWithValue("@Id", author_data.Id);
 
             SqlDataReader data = await cur.ExecuteReaderAsync();
             bool _state = data.Read();
@@ -132,6 +98,7 @@ namespace Spider
                 //作者存在，更新作者信息
                 string _Name = data.GetString(0);
                 int _Follower_Count = data.GetInt32(1);
+                data.Close();
 
                 if (_Name != author_data.Name || _Follower_Count != author_data.Follower_Count)
                 {
@@ -140,7 +107,7 @@ namespace Spider
                     cur.Parameters.AddWithValue("@Follower_Count", author_data.Follower_Count);
                     await cur.ExecuteNonQueryAsync();
                 }
-                data.Close();
+                
             }
             else
             {
@@ -153,7 +120,7 @@ namespace Spider
                 cur.CommandText = _sql;
                 cur.Parameters.Clear();
 
-                SqlParameter Id_SqlParameter = new SqlParameter("@Id",System.Data.SqlDbType.NVarChar);
+                SqlParameter Id_SqlParameter = new SqlParameter("@Id", System.Data.SqlDbType.NVarChar);
                 Id_SqlParameter.Value = author_data.Id;
                 cur.Parameters.Add(Id_SqlParameter);
 
@@ -174,7 +141,7 @@ namespace Spider
                 cur.Parameters.AddWithValue("@Is_Advertiser", author_data.Is_Advertiser).SqlDbType = System.Data.SqlDbType.Bit;
                 cur.Parameters.AddWithValue("@Is_Followed", author_data.Is_Followed).SqlDbType = System.Data.SqlDbType.Bit;
                 cur.Parameters.AddWithValue("@Is_Privacy", author_data.Is_Privacy).SqlDbType = System.Data.SqlDbType.Bit;
-                
+
                 cur.Parameters.AddWithValue("@Follower_Count", author_data.Follower_Count).SqlDbType = System.Data.SqlDbType.Int;
 
                 await cur.ExecuteNonQueryAsync();
@@ -186,9 +153,15 @@ namespace Spider
 
         }
 
-        public static async Task<bool> question_is_cz(SqlConnection conn, string Question_id)
+        /// <summary>
+        /// 检测指定问题id是否存在于问题数据库内
+        /// </summary>
+        /// <param name="conn">数据库连接对象</param>
+        /// <param name="Question_id">问题id</param>
+        /// <returns>存在返回true</returns>
+        public static async Task<bool> InQuestions(SqlConnection conn, string Question_id)
         {
-            
+
             SqlCommand cur = conn.CreateCommand();
             cur.CommandText = "select count(id) from Question where id = @id";
             cur.Parameters.AddWithValue("@id", Question_id);
@@ -196,8 +169,7 @@ namespace Spider
             cur.Dispose();
             if (_question_count == 1)
             {
-                //Sql.Put_SqlConnection(conn);
-                Console.WriteLine($"{Question_id} 已存在!");
+                Program.log($"{Question_id} 已存在!");
                 return true;
             }
             else
