@@ -41,6 +41,7 @@
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.listView1 = new System.Windows.Forms.ListView();
             this.index = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.question = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.content = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.vol_count = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.tabPage2 = new System.Windows.Forms.TabPage();
@@ -48,7 +49,8 @@
             this.刷新ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.正序ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.倒序ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.question = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.questionid = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.answerid = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
             this.contextMenuStrip1.SuspendLayout();
@@ -87,7 +89,10 @@
             this.index,
             this.question,
             this.content,
-            this.vol_count});
+            this.vol_count,
+            this.questionid,
+            this.answerid});
+            this.listView1.ContextMenuStrip = this.contextMenuStrip1;
             this.listView1.FullRowSelect = true;
             this.listView1.GridLines = true;
             this.listView1.HideSelection = false;
@@ -107,6 +112,11 @@
             // index
             // 
             this.index.Text = "序号";
+            // 
+            // question
+            // 
+            this.question.Text = "问题";
+            this.question.Width = 300;
             // 
             // content
             // 
@@ -141,6 +151,7 @@
             this.刷新ToolStripMenuItem.Name = "刷新ToolStripMenuItem";
             this.刷新ToolStripMenuItem.Size = new System.Drawing.Size(100, 22);
             this.刷新ToolStripMenuItem.Text = "刷新";
+            this.刷新ToolStripMenuItem.Click += new System.EventHandler(this.刷新ToolStripMenuItem_Click);
             // 
             // 正序ToolStripMenuItem
             // 
@@ -154,10 +165,13 @@
             this.倒序ToolStripMenuItem.Size = new System.Drawing.Size(100, 22);
             this.倒序ToolStripMenuItem.Text = "倒序";
             // 
-            // question
+            // questionid
             // 
-            this.question.Text = "问题";
-            this.question.Width = 300;
+            this.questionid.Text = "问题id";
+            // 
+            // answerid
+            // 
+            this.answerid.Text = "答案id";
             // 
             // Form1
             // 
@@ -190,6 +204,8 @@
         private System.Windows.Forms.ToolStripMenuItem 正序ToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem 倒序ToolStripMenuItem;
         private System.Windows.Forms.ColumnHeader question;
+        private System.Windows.Forms.ColumnHeader questionid;
+        private System.Windows.Forms.ColumnHeader answerid;
     }
 }
 

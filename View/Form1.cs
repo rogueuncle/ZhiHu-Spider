@@ -2,22 +2,17 @@
 using CefSharp.WinForms;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
+using System.Data.SqlClient;
+using System.Diagnostics.Eventing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
 
 namespace View
 {
     public partial class Form1 : Form
     {
         public ChromiumWebBrowser chromeBrowser;
+        private const string ConnectionString = "Server=127.0.0.1;Database=ZhiHu;User Id=sa;Password=sa123456789;";
         public Form1()
         {
             InitializeComponent();
@@ -26,11 +21,8 @@ namespace View
         public void InitializeChromium()
         {
             CefSettings settings = new CefSettings();
-            // Initialize cef with the provided settings
             Cef.Initialize(settings);
-            // Create a browser component
             chromeBrowser = new ChromiumWebBrowser("https://www.baidu.com");
-            // Add it to the form and fill it to the form window.
             
             this.tabPage2.Controls.Add(chromeBrowser);
             //this.Controls.Add(chromeBrowser);
@@ -39,11 +31,7 @@ namespace View
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            using (var conn = new AnswerContext())
-            {
-                var list = conn.answers.ToList();
-                Console.WriteLine(list.Count);
-            }
+            
         }
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
@@ -53,7 +41,13 @@ namespace View
 
         private void listView1_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            MessageBox.Show("1");
+            string questionid = listView1.SelectedItems[0].SubItems[4].Text;
+            string answerid = listView1.SelectedItems[0].SubItems[5].Text;
+            Console.WriteLine(questionid);
+            Console.WriteLine(answerid);
+            chromeBrowser.Load($"https://www.zhihu.com/question/{questionid}/answer/{answerid}");
+            this.tabPage2.Focus();
+            //
         }
 
         private void listView1_ColumnClick(object sender, ColumnClickEventArgs e)
@@ -91,47 +85,63 @@ namespace View
             }
         }
 
-
-        private const string ConnectionString = "Server=127.0.0.1;Database=ZhiHu2;User Id=sa;Password=sa123456789;";
-
-        #region 创建模型
-        [Table("Answer")]
-        public class Answer
+        private void 刷新ToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            public int Id { get; set; }
+            SqlConnection conn = new SqlConnection(ConnectionString);
+            conn.Open();
+            SqlCommand cur = conn.CreateCommand();
+            string sql = "select count(*) from Answer";
+            cur.CommandText = sql;
+            int count = (int)cur.ExecuteScalar();
 
-            [Required]
-            [StringLength(32)]
-            public string Author_Id { get; set; }
-
-            [Required]
-            public int Question_Id { get; set; }
-
-
-        }
-
-        #endregion
-
-        #region 创建上下文
-        public class AnswerContext : DbContext
-        {
-            private const string ConnectionString = Form1.ConnectionString;
-            public DbSet<Answer> answers { get; set; }
-            //protected override void OnConfiguring(DbContextOptionsBuilder dbContextOptionsBuilder)
-            //{
-            //    //base.OnConfiguring(dbContextOptionsBuilder);
-            //    dbContextOptionsBuilder.UseSqlServer(ConnectionString);
-            //}
-
-            protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+            Random random = new Random(System.Environment.TickCount);
+            int[] arr = new int[10];
+            for (int i = 0; i < 10; i++)
             {
-                optionsBuilder.UseSqlServer("Server=127.0.0.1;Database=ZhiHu2;User Id=sa;Password=sa123456789;");
+                arr[i] = random.Next(0, count);
             }
+
+            sql = "SELECT top 100 Question.Title,Answer.Excerpt,Answer.[Voteup_Count],Answer.Question_Id,Answer.Id " +
+                $"FROM[Answer], [Question] where Answer.Question_Id = Question.Id and Answer.[Index] in {Arr2Str(arr)}";
+
+            
+
+            cur.CommandText = sql;
+
+
+            SqlDataReader readdata = cur.ExecuteReader();
+
+            int _index = 0;
+            listView1.BeginUpdate();
+            listView1.Items.Clear();
+            Console.WriteLine(readdata.HasRows);
+            while (readdata.Read())
+            {
+                ListViewItem listViewItem = new ListViewItem(_index.ToString());
+                listViewItem.SubItems.Add(readdata.GetString(0));
+                listViewItem.SubItems.Add(readdata.GetString(1));
+                listViewItem.SubItems.Add(readdata.GetInt32(2).ToString());
+                listViewItem.SubItems.Add(readdata.GetInt32(3).ToString());
+                listViewItem.SubItems.Add(readdata.GetInt32(4).ToString());
+
+                listView1.Items.Add(listViewItem);
+                _index++;
+            }
+            listView1.EndUpdate();
+
+            cur.Dispose();
+            conn.Close();
         }
 
-
-        #endregion
-
+        public static string Arr2Str(int[] arr)
+        {
+            string data = "(";
+            for (int i = 0; i < arr.Length-1; i++)
+            {
+                data += arr[i].ToString() + ",";
+            }
+            return data + arr[arr.Length - 1]+")";
+        }
     }
 
 
