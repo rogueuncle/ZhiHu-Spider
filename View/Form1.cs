@@ -47,42 +47,13 @@ namespace View
             Console.WriteLine(answerid);
             chromeBrowser.Load($"https://www.zhihu.com/question/{questionid}/answer/{answerid}");
             this.tabPage2.Focus();
+            this.tabControl1.SelectedIndex = 1;
             //
         }
 
         private void listView1_ColumnClick(object sender, ColumnClickEventArgs e)
         {
-            ListView obj = (ListView)sender;
-            if(obj.Columns[e.Column].Text == "点赞数")
-            {
-                obj.BeginUpdate();
-
-                List<ListViewItem> list = new List<ListViewItem>();
-                System.Collections.IEnumerator enumerator = obj.Items.GetEnumerator();
-
-                while (enumerator.MoveNext())
-                {
-                    ListViewItem item = (ListViewItem)enumerator.Current;
-                    list.Add(item);
-                }
-
-                if (e.Column == 0)
-                {
-                    list.Sort((p1,p2) => p2.Text.CompareTo(p1.Text));
-                }
-                else
-                {
-                    int _column = e.Column - 1;
-                    list.Sort((p1, p2) => p2.SubItems[_column].Text.CompareTo(p1.SubItems[_column].Text));
-                }
-
-                obj.Items.Clear();
-                for (int i = 0; i < list.Count; i++)
-                {
-                    obj.Items.Add(list[i]);
-                }
-                obj.EndUpdate();
-            }
+            sort((ListView)sender, e.Column, true);
         }
 
         private void 刷新ToolStripMenuItem_Click(object sender, EventArgs e)
@@ -141,6 +112,66 @@ namespace View
                 data += arr[i].ToString() + ",";
             }
             return data + arr[arr.Length - 1]+")";
+        }
+
+        public static void sort(ListView obj, int Column, bool desc)
+        {
+            if (obj.Columns[Column].Text == "点赞数")
+            {
+                obj.BeginUpdate();
+
+                List<ListViewItem> list = new List<ListViewItem>();
+                System.Collections.IEnumerator enumerator = obj.Items.GetEnumerator();
+
+                while (enumerator.MoveNext())
+                {
+                    ListViewItem item = (ListViewItem)enumerator.Current;
+                    list.Add(item);
+                }
+
+                if (Column == 0)
+                {
+                    if (desc)
+                    {
+                        list.Sort((p1, p2) => p1.Text.CompareTo(p2.Text));
+                    }
+                    else
+                    {
+                        list.Sort((p1, p2) => p2.Text.CompareTo(p1.Text));
+                    }
+                }
+                else
+                {
+                    int _column = Column;
+                    if (desc)
+                    {
+                        list.Sort((p1, p2) => Convert.ToInt32(p2.SubItems[_column].Text).CompareTo(Convert.ToInt32(p1.SubItems[_column].Text)));
+                    }
+                    else
+                    {
+                        list.Sort((p1, p2) => Convert.ToInt32(p1.SubItems[_column].Text).CompareTo(Convert.ToInt32(p2.SubItems[_column].Text)));
+                    }
+                    
+                    
+                }
+
+                obj.Items.Clear();
+                for (int i = 0; i < list.Count; i++)
+                {
+                    obj.Items.Add(list[i]);
+                }
+                obj.EndUpdate();
+            }
+        }
+
+        private void 正序ToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            sort(listView1, 3, false);
+        }
+
+        private void 倒序ToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            sort(listView1, 3, true);
         }
     }
 

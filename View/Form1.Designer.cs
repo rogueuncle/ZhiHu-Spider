@@ -29,14 +29,6 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.Windows.Forms.ListViewItem listViewItem1 = new System.Windows.Forms.ListViewItem(new string[] {
-            "1",
-            "222222222255",
-            "3333"}, -1);
-            System.Windows.Forms.ListViewItem listViewItem2 = new System.Windows.Forms.ListViewItem(new string[] {
-            "2",
-            "111111",
-            "22"}, -1);
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.listView1 = new System.Windows.Forms.ListView();
@@ -44,13 +36,13 @@
             this.question = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.content = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.vol_count = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.tabPage2 = new System.Windows.Forms.TabPage();
+            this.questionid = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.answerid = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.刷新ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.正序ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.倒序ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.questionid = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.answerid = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.tabPage2 = new System.Windows.Forms.TabPage();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
             this.contextMenuStrip1.SuspendLayout();
@@ -96,9 +88,6 @@
             this.listView1.FullRowSelect = true;
             this.listView1.GridLines = true;
             this.listView1.HideSelection = false;
-            this.listView1.Items.AddRange(new System.Windows.Forms.ListViewItem[] {
-            listViewItem1,
-            listViewItem2});
             this.listView1.Location = new System.Drawing.Point(3, 3);
             this.listView1.MultiSelect = false;
             this.listView1.Name = "listView1";
@@ -127,15 +116,13 @@
             // 
             this.vol_count.Text = "点赞数";
             // 
-            // tabPage2
+            // questionid
             // 
-            this.tabPage2.Location = new System.Drawing.Point(4, 22);
-            this.tabPage2.Name = "tabPage2";
-            this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage2.Size = new System.Drawing.Size(866, 390);
-            this.tabPage2.TabIndex = 1;
-            this.tabPage2.Text = "展示页面";
-            this.tabPage2.UseVisualStyleBackColor = true;
+            this.questionid.Text = "问题id";
+            // 
+            // answerid
+            // 
+            this.answerid.Text = "答案id";
             // 
             // contextMenuStrip1
             // 
@@ -158,20 +145,24 @@
             this.正序ToolStripMenuItem.Name = "正序ToolStripMenuItem";
             this.正序ToolStripMenuItem.Size = new System.Drawing.Size(100, 22);
             this.正序ToolStripMenuItem.Text = "正序";
+            this.正序ToolStripMenuItem.Click += new System.EventHandler(this.正序ToolStripMenuItem_Click);
             // 
             // 倒序ToolStripMenuItem
             // 
             this.倒序ToolStripMenuItem.Name = "倒序ToolStripMenuItem";
             this.倒序ToolStripMenuItem.Size = new System.Drawing.Size(100, 22);
             this.倒序ToolStripMenuItem.Text = "倒序";
+            this.倒序ToolStripMenuItem.Click += new System.EventHandler(this.倒序ToolStripMenuItem_Click);
             // 
-            // questionid
+            // tabPage2
             // 
-            this.questionid.Text = "问题id";
-            // 
-            // answerid
-            // 
-            this.answerid.Text = "答案id";
+            this.tabPage2.Location = new System.Drawing.Point(4, 22);
+            this.tabPage2.Name = "tabPage2";
+            this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPage2.Size = new System.Drawing.Size(866, 390);
+            this.tabPage2.TabIndex = 1;
+            this.tabPage2.Text = "展示页面";
+            this.tabPage2.UseVisualStyleBackColor = true;
             // 
             // Form1
             // 
